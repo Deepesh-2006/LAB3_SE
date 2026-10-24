@@ -1,0 +1,6 @@
+{
+  "name": "Lab 3: Architecture & UML Component Studio",
+  "description": "Comprehensive UML Component Diagram and Architectural Justification Suite for the Self-Service Coffee Kiosk System (Lab 3).",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

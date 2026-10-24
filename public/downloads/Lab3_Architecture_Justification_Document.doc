@@ -1,0 +1,93 @@
+<html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+<head>
+  <meta charset="utf-8">
+  <title>Lab 3: Architectural Justification Document</title>
+  <style>
+    body { font-family: 'Calibri', 'Arial', sans-serif; font-size: 11pt; line-height: 1.35; color: #111; margin: 1in; }
+    h1 { font-size: 18pt; color: #1e3a8a; margin-bottom: 4pt; }
+    h2 { font-size: 13pt; color: #1e3a8a; border-bottom: 1.5pt solid #2563eb; padding-bottom: 2pt; margin-top: 14pt; }
+    h3 { font-size: 11pt; color: #0f172a; margin-top: 8pt; margin-bottom: 2pt; }
+    p { margin-top: 2pt; margin-bottom: 6pt; text-align: justify; }
+    .quote-box { background-color: #eff6ff; border-left: 4pt solid #2563eb; padding: 8pt 12pt; font-weight: bold; font-size: 11.5pt; color: #1e3a8a; margin: 10pt 0; }
+    table { width: 100%; border-collapse: collapse; margin-top: 8pt; font-size: 9.5pt; }
+    th { background-color: #1e3a8a; color: white; border: 1pt solid #cbd5e1; padding: 5pt; text-align: left; }
+    td { border: 1pt solid #cbd5e1; padding: 4pt 6pt; }
+    tr:nth-child(even) { background-color: #f8fafc; }
+  </style>
+</head>
+<body>
+  <h1>Lab 3: Architectural Justification Document</h1>
+  <p><strong>Course:</strong> Software Engineering - Architecture &amp; Component Modelling | <strong>Scenario:</strong> Self-Service Coffee Kiosk System | <strong>Deliverable:</strong> Lab 3 Justification</p>
+  <hr/>
+
+  <div class="quote-box">
+    Architecture Selection: &ldquo;We chose Layered Architecture for the Self-Service Coffee Kiosk System.&rdquo;
+  </div>
+
+  <h2>1. Architectural Choice</h2>
+  <p><strong>Selected Architecture:</strong> Layered Architecture (3-Tier: Presentation Layer, Business Logic Layer, Data &amp; Persistence Layer)</p>
+
+  <h2>2. Two Scenario-Related Reasons for Selection</h2>
+  <h3>Reason 1: Hardware Abstraction &amp; Peripheral Isolation in a Standalone Edge Terminal</h3>
+  <p>The coffee kiosk is a physical self-service kiosk situated on-premise in a busy cafe, requiring tight coupling to physical peripherals (a touchscreen display, an EMV credit card reader, and an ESC/POS thermal receipt printer). Layered architecture isolates touch-interaction logic in the Presentation Layer, while isolating hardware-specific device drivers (Receipt Printer Component and Payment Service Component) inside dedicated service wrappers in the Business Layer. If the café upgrades its thermal printer or swaps card readers, only the hardware driver interface requires adaptation without modifying the core ordering logic or user interface.</p>
+
+  <h3>Reason 2: High Operational Reliability &amp; Zero Network Dependency in High-Volume Queues</h3>
+  <p>In a bustling café environment, long lines demand rapid throughput and absolute reliability. Unlike distributed microservices which introduce inter-process network overhead, serialization latency, and network timeout vulnerabilities, a Layered Architecture executes in-process on the local kiosk computer. Menu data and pricing calculations resolve instantaneously within memory, allowing the kiosk to continue serving coffee even during intermittent café broadband or Wi-Fi disruptions.</p>
+
+  <h2>3. Security Advantage</h2>
+  <p><strong>Strict PCI-DSS Isolation &amp; Sandboxed Financial Boundary:</strong> By enforcing horizontal layer separation, customer payment handling is strictly segregated. The customer interacts only with the Presentation Layer, which never receives or handles raw credit card primary account numbers (PAN). Instead, payment requests are routed through the Payment Service Component directly to the secure hardware EMV chip terminal. The Presentation Layer and local Database Component have zero direct access to financial credentials. Order confirmation requires a signed token before triggering the Order Manager and Receipt Printer, completely preventing unauthorized receipt forgery or payment bypass.</p>
+
+  <h2>4. Performance Benefit</h2>
+  <p><strong>Sub-Millisecond Menu Queries &amp; Asynchronous Print Spooling:</strong> Layered Architecture enables high-performance local data caching and asynchronous task decoupling. Menu catalog data (coffee types: Espresso, Americano, Latte; and size multipliers) is loaded into an in-memory cache in the Data Layer, eliminating database I/O lag and enabling 60 FPS touchscreen response times. Furthermore, the Order Manager decouples the slow mechanical printing process by spooling print commands asynchronously to the Receipt Printer Component. The UI immediately resets to welcome the next patron in line while the physical printer finishes emitting the receipt.</p>
+
+  <h2>5. Identified Components &amp; Interface Specification</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>Component Name</th>
+        <th>Layer</th>
+        <th>Provided Interfaces (Ball)</th>
+        <th>Required Interfaces (Socket)</th>
+        <th>Key Responsibility</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>Touchscreen UI Component</strong></td>
+        <td>Presentation Layer</td>
+        <td>IUIEventHandler</td>
+        <td>IOrderPlacement, IMenuCatalog</td>
+        <td>Renders intuitive touch screen menu, captures drink choices (Espresso/Americano/Latte) &amp; sizes (Small/Large), and displays transaction status.</td>
+      </tr>
+      <tr>
+        <td><strong>Order Manager Component</strong></td>
+        <td>Business Logic Layer</td>
+        <td>IOrderPlacement</td>
+        <td>IPaymentProcessing, IReceiptPrint, IMenuCatalog, IDataStore</td>
+        <td>Orchestrates the order state machine, calculates prices and taxes, verifies payment approval, triggers receipt printing, and persists orders.</td>
+      </tr>
+      <tr>
+        <td><strong>Payment Service Component</strong></td>
+        <td>Business Logic Layer</td>
+        <td>IPaymentProcessing</td>
+        <td>ICardReaderHardware</td>
+        <td>Handles credit card only transactions, interfaces with secure EMV card reader hardware, returns approval tokens, and enforces PCI security.</td>
+      </tr>
+      <tr>
+        <td><strong>Receipt Printer Component</strong></td>
+        <td>Business / Hardware Layer</td>
+        <td>IReceiptPrint</td>
+        <td>IPrinterHardwareDriver</td>
+        <td>Formats ESC/POS receipts with item details, masked payment token, and timestamp, spooling print jobs to physical thermal hardware.</td>
+      </tr>
+      <tr>
+        <td><strong>Database Component</strong></td>
+        <td>Data / Persistence Layer</td>
+        <td>IMenuCatalog, IDataStore</td>
+        <td>None (Base Data Layer)</td>
+        <td>Stores coffee drink catalog, size pricing multipliers, and historical transaction logs for sales auditing.</td>
+      </tr>
+    </tbody>
+  </table>
+</body>
+</html>
